@@ -1,0 +1,97 @@
+name: SuperKart MLOps Pipeline
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  HF_TOKEN: ${{ secrets.HF_TOKEN }}
+  HF_DATASET_REPO: cadambank/superkart-sales-data
+  HF_MODEL_REPO: cadambank/superkart-sales-model
+  HF_SPACE_REPO: cadambank/superkart-sales-forecast
+
+jobs:
+  register-dataset:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Register raw dataset on Hugging Face
+        run: python superkart_project/model_building/data_register.py
+
+  data-prep:
+    needs: register-dataset
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Clean, split and upload train/test data
+        run: python superkart_project/model_building/prep.py
+
+  model-training:
+    needs: data-prep
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Train, tune, evaluate and register best model
+        run: python superkart_project/model_building/train.py
+      - name: Keep metrics for the publish job
+        uses: actions/upload-artifact@v4
+        with:
+          name: metrics
+          path: superkart_project/model_building/metrics.json
+
+  deploy-hosting:
+    needs: model-training
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Push deployment files to Hugging Face Space
+        run: python superkart_project/hosting/hosting.py
+
+  publish-results:
+    needs: deploy-hosting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: metrics
+          path: superkart_project/model_building
+      - name: Commit updated metrics to main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add superkart_project/model_building/metrics.json
+          if git diff --cached --quiet; then
+            echo "Metrics unchanged - nothing to commit"
+          else
+            git commit -m "ci: update model metrics from run ${{ github.run_number }}"
+            git push origin HEAD:main
+          fi

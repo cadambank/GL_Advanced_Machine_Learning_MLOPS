@@ -1,0 +1,47 @@
+{
+  "selected_model": "RandomForest",
+  "model_file": "superkart_sales_model_v1.joblib",
+  "results": {
+    "RandomForest": {
+      "best_params": {
+        "max_depth": null,
+        "min_samples_leaf": 5,
+        "n_estimators": 100
+      },
+      "cv_rmse": 281.67,
+      "train": {
+        "RMSE": 225.53,
+        "MAE": 80.89,
+        "R2": 0.9551,
+        "MAPE": 0.0315
+      },
+      "test": {
+        "RMSE": 281.67,
+        "MAE": 106.14,
+        "R2": 0.9305,
+        "MAPE": 0.0386
+      }
+    },
+    "XGBoost": {
+      "best_params": {
+        "learning_rate": 0.05,
+        "max_depth": 7,
+        "n_estimators": 100,
+        "subsample": 1.0
+      },
+      "cv_rmse": 284.07,
+      "train": {
+        "RMSE": 211.9,
+        "MAE": 82.33,
+        "R2": 0.9604,
+        "MAPE": 0.0305
+      },
+      "test": {
+        "RMSE": 283.79,
+        "MAE": 114.54,
+        "R2": 0.9294,
+        "MAPE": 0.042
+      }
+    }
+  }
+}
